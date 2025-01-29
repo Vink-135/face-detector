@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: #333;
+        }
+        #camera {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+            margin: 20px auto;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        .buttons button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Recognition System</h1>
+    <video id="camera" autoplay></video>
+    <div class="buttons">
+        <button id="register">Register Face</button>
+        <button id="recognize">Recognize Face</button>
+    </div>
+    <div id="result"></div>
+
+    <script>
+        const video = document.getElementById('camera');
+        const registerButton = document.getElementById('register');
+        const recognizeButton = document.getElementById('recognize');
+        const resultDiv = document.getElementById('result');
+
+        // Access the webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing the camera: ", err);
+            });
+
+        // Capture a frame from the video
+        function captureFrame() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg');
+        }
+
+        // Send the captured frame to the server
+        async function sendFrame(url) {
+            try {
+                const frame = captureFrame();
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: frame })
+                });
+                const result = await response.json();
+                resultDiv.textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Register face
+        registerButton.addEventListener('click', () => {
+            const name = prompt("Enter your name:");
+            if (name) {
+                sendFrame(`http://localhost:5001/register_face?name=${encodeURIComponent(name)}`);
+            }
+        });
+
+        // Recognize face
+        recognizeButton.addEventListener('click', () => {
+            sendFrame('http://localhost:5001/recognize_face');
+        });
+    </script>
+</body>
+</html>
